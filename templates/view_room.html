@@ -5,7 +5,7 @@
     <title>My Chat App</title>
   </head>
   <body>
-    <h1>Welcome to chat room {{ room }}</h1>
+    <h1>Welcome to chat room: {{ room.name }}</h1>
     <div id="messages"></div>
     <form id="message_input_form">
       <input
@@ -15,6 +15,13 @@
       />
       <button type="submit">Send</button>
     </form>
+
+    <ul>
+      {% for member in room_members %}
+        <li>{{ member._id.username }}</li>
+      {% endfor %}
+    </ul>
+
   </body>
   <script
     src="https://cdn.socket.io/4.8.3/socket.io.min.js"
@@ -26,8 +33,8 @@
 
     socket.on("connect", function () {
       socket.emit("join_room", {
-        username: "{{ username }}",
-        room: "{{ room }}",
+        username: "{{ current_user.username }}",
+        room: "{{ room._id }}",
       });
 
       let message_input = document.getElementById("message_input");
@@ -37,8 +44,8 @@
         let message = message_input.value.trim();
         if (message.length) {
           socket.emit("send_message", {
-            username: "{{ username }}",
-            room: "{{ room }}",
+            username: "{{ current_user.username }}",
+            room: "{{ room_id }}",
             message: message,
           });
         }
@@ -46,6 +53,13 @@
         message_input.focus();
       };
     });
+
+    window.onbeforeunload = function () {
+      socket.emit('leave_room', {
+        username: "{{ current_user.username }}",
+        room: "{{ room._id }}"
+      })
+    };
 
     socket.on("receive_message", function (data) {
       console.log(data);
@@ -58,6 +72,13 @@
       console.log(data);
       const newNode = document.createElement("div");
       newNode.innerHTML = `<b>${data.username}</b> has joined the room`;
+      document.getElementById("messages").appendChild(newNode);
+    });
+
+    socket.on("leave_room_announcement", function (data) {
+      console.log(data);
+      const newNode = document.createElement("div");
+      newNode.innerHTML = `<b>${data.username}</b> has left the room`;
       document.getElementById("messages").appendChild(newNode);
     });
   </script>

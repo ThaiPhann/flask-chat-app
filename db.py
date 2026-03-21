@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from bson import ObjectId
-from pymongo import MongoClient
+from pymongo import DESCENDING, MongoClient
 from werkzeug.security import generate_password_hash
 from user import User
 import os
@@ -21,6 +21,9 @@ rooms_collection = chat_db.get_collection("rooms")
 
 # room members
 room_members_collection = chat_db.get_collection("room_members")
+
+# messages
+messages_collection = chat_db.get_collection("messages")
 
 def save_user(username, email, password):
     hashed_password = generate_password_hash(password)
@@ -46,6 +49,10 @@ def update_room(room_id, room_name):
     room_members_collection.update_many({'_id.room_id': ObjectId(room_id)}, 
                                         {'$set': {'room_name': room_name}})
 
+def remove_room(room_id):
+    room_members_collection.delete_many({'_id.room_id': ObjectId(room_id)})
+    rooms_collection.delete_one({'_id':ObjectId(room_id)})
+
 def get_room(room_id):
     return rooms_collection.find_one({'_id': ObjectId(room_id)})
 
@@ -70,8 +77,14 @@ def remove_room_members(room_id, usernames):
 def get_room_members(room_id):
     return list(room_members_collection.find({'_id.room_id': ObjectId(room_id)}))
 
-def get_rooms_for_user(username):
-    return list(room_members_collection.find({'_id.username': username}))
+ROOM_FETCH_LIMIT = 5
+def get_rooms_for_user(username, page=0):
+    offset = page * ROOM_FETCH_LIMIT
+    rooms = list(room_members_collection.find({'_id.username': username})
+                                        .sort('_id.room_id', DESCENDING)
+                                        .limit(ROOM_FETCH_LIMIT)
+                                        .skip(offset))
+    return rooms
 
 def is_room_member(room_id, username):
     return room_members_collection.count_documents({'_id': {'room_id': ObjectId(room_id), 
@@ -81,3 +94,21 @@ def is_room_admin(room_id, username):
     return room_members_collection.count_documents({'_id': {'room_id': ObjectId(room_id), 
                                                             'username': username},
                                                     'is_room_admin': True})
+
+def save_message(room_id, text, sender):
+    messages_collection.insert_one({'room_id': room_id, 
+                                    'text': text,
+                                    'sender': sender,
+                                    'created_at': datetime.now()})
+    
+MESSAGE_FETCH_LIMIT = 3
+
+def get_messages(room_id, page=0):
+    offset = page * MESSAGE_FETCH_LIMIT
+    messages = list(messages_collection.find({'room_id': room_id})
+                                       .sort('_id', DESCENDING)
+                                       .limit(MESSAGE_FETCH_LIMIT)
+                                       .skip(offset))
+    for message in messages:
+        message['created_at'] = message['created_at'].strftime("%d %b, %H:%M")
+    return messages

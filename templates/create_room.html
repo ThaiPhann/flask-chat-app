@@ -1,41 +1,87 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>My Chat App</title>
-</head>
-<body>
-    <h1>Create Room</h1>
-    <h3>{{ message }}</h3>
-    <form action="/create-room" method="post">
-    <label>Room name:</label>
-    <input type="text" name="room_name" value="{{ room_name }}">
-    <br>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Room</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/create_room.css') }}"
+    />
+  </head>
 
-    <h3>{{ search_message }}</h3>
+  <body>
+    <div class="container">
+      <div class="card">
+        <h1>$ Create Room</h1>
 
-    <!-- Search user -->
-    <label>Search username:</label>
-    <input type="text" name="username">
-    <button type="submit" name="action" value="search">Search</button>
+        {% if message %}
+        <div class="message">{{ message }}</div>
+        {% endif %}
 
-    <!-- Members list -->
-    <h3>Chat Members</h3>
-    <ul>
-        {% for member in members %}
-            <li>
-                <p>{{ member.username }}<p>
-                <input type="hidden" name="remove_user" value="{{ member.username }}">
-                <button type="submit" name="action" value="remove">remove</button>
-            </li>
-            <input type="hidden" name="members" value="{{ member.username }}">
-        {% endfor %}
-    </ul>
+        <form action="/create-room" method="post">
+          <!-- Room name -->
+          <div class="form-group">
+            <label>>> Room Name</label>
+            <input
+              type="text"
+              name="room_name"
+              value="{{ room_name }}"
+              required
+            />
+          </div>
 
-    <br>
+          <!-- Search -->
+          <div class="form-group">
+            <label>>> Search User</label>
+            <div class="search-box">
+              <input
+                type="text"
+                name="username"
+                placeholder="Enter username..."
+              />
+              <button type="submit" name="action" value="search">Search</button>
+            </div>
+          </div>
 
-    <!-- Create room -->
-    <button type="submit" name="action" value="create">Create Room</button>
-</form>
-</body>
+          {% if search_message %}
+          <div class="message">{{ search_message }}</div>
+          {% endif %}
+
+          <!-- Members -->
+          <div class="members">
+            <h3># Members</h3>
+
+            {% for member in members %}
+            <div class="member-item">
+              <span>> {{ member.username }}</span>
+
+              <!-- giữ state -->
+              <input
+                type="hidden"
+                name="members"
+                value="{{ member.username }}"
+              />
+
+              <!-- remove -->
+              <button
+                type="submit"
+                name="remove_user"
+                value="{{ member.username }}"
+                class="remove-btn"
+              >
+                Remove
+              </button>
+            </div>
+            {% endfor %}
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" name="action" value="create" class="submit-btn">
+            Create Room
+          </button>
+        </form>
+      </div>
+    </div>
+  </body>
 </html>

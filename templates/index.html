@@ -1,17 +1,107 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My Chat App</title>
-</head>
-<body>
-<h1>My Chat App</h1>
-<h3>Hi {% if current_user.is_authenticated %}{{ current_user.username }}{% else %}Guest{% endif %}!</h3>
 
-<ul>
-    {% for room in rooms %}
-        <li><a href="/rooms/{{ room._id.room_id }}">{{ room.room_name }}</a></li>
-    {% endfor %}
-</ul>
-</body>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/index.css') }}"
+    />
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>My Chat App</h1>
+
+      <div class="welcome">
+        Hi {% if current_user.is_authenticated %}
+        <b>{{ current_user.username }}</b>
+        {% else %} Guest {% endif %}
+      </div>
+
+      <div class="card">
+        <div class="top-bar">
+          <h3>$ Your Rooms</h3>
+          <div>
+            <a href="/create-room" class="create-btn">+ Create Room</a>
+            <a href="/logout" class="logout-btn">Log out</a>
+          </div>
+        </div>
+        {% if rooms %}
+        <ul id="rooms">
+          {% for room in rooms %}
+          <li class="room-item">
+            <a class="room-link" href="/rooms/{{ room._id.room_id }}">
+              > {{ room.room_name }}
+            </a>
+            {% if room._id.username == current_user.username and
+            room.is_room_admin %}
+            <div class="actions">
+              <a href="/rooms/{{ room._id.room_id }}/edit" class="edit-btn">
+                Edit
+              </a>
+            </div>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <h3
+          style="
+            display: flex;
+            align-content: center;
+            justify-content: center;
+            margin: 50px 0 50px 0;
+          "
+        >
+          Let's create your room chat
+        </h3>
+        {% endif %}
+        <button class="load-btn" id="load_older_rooms_btn">More</button>
+      </div>
+    </div>
+    <script>
+      let page = 0;
+      const appendRoom = (room_id, room_name, isRoomAdmin) => {
+        const li = document.createElement("li");
+        li.className = "room-item";
+
+        let html = `
+              <a class="room-link" href="/rooms/${room_id.$oid}">
+                > ${room_name}
+              </a>
+            `;
+        if (isRoomAdmin) {
+          html += `
+              <div class="actions">
+                <a href="/rooms/${room_id.$oid}/edit" class="edit-btn">
+                  ✏️ Edit
+                </a>
+              </div>
+            `;
+        }
+        li.innerHTML = html;
+        document.getElementById("rooms").appendChild(li);
+      };
+
+      document.getElementById("load_older_rooms_btn").onclick = (e) => {
+        page += 1;
+        fetch(`/home/rooms?page=${page}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }).then((response) =>
+          response.json().then((rooms) => {
+            console.log(rooms);
+            rooms.forEach((e) => {
+              appendRoom(e._id.room_id, e.room_name, e.is_room_admin);
+            });
+          }),
+        );
+      };
+    </script>
+  </body>
 </html>

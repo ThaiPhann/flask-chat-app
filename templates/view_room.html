@@ -2,84 +2,223 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>My Chat App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ room.name }} - Chat</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/view_room.css') }}"
+    />
   </head>
   <body>
-    <h1>Welcome to chat room: {{ room.name }}</h1>
-    <div id="messages"></div>
-    <form id="message_input_form">
-      <input
-        type="text"
-        id="message_input"
-        placeholder="Enter your message here"
-      />
-      <button type="submit">Send</button>
-    </form>
+    <div class="chat-container">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <h3>Members</h3>
+        {% for member in room_members %}
+        <div class="member">{{ member._id.username }}</div>
+        {% endfor %}
+        <a href="/"><button class="leave-btn" type="button">Leave</button></a>
+      </div>
 
-    <ul>
-      {% for member in room_members %}
-        <li>{{ member._id.username }}</li>
-      {% endfor %}
-    </ul>
+      <!-- Chat -->
+      <div class="chat-main">
+        <div class="chat-header">
+          {{ room.name }} (<span id="online_count">0</span> online)
+        </div>
 
-  </body>
-  <script
-    src="https://cdn.socket.io/4.8.3/socket.io.min.js"
-    integrity="sha384-kzavj5fiMwLKzzD1f8S7TeoVIEi7uKHvbTA3ueZkrzYq75pNQUiUi6Dy98Q3fxb0"
-    crossorigin="anonymous"
-  ></script>
-  <script>
-    const socket = io.connect("http://127.0.0.1:5000");
+        <button class="load-btn" id="load_older_messages_btn">
+          Load older messages
+        </button>
 
-    socket.on("connect", function () {
-      socket.emit("join_room", {
-        username: "{{ current_user.username }}",
-        room: "{{ room._id }}",
+        <div id="messages" class="messages">
+          {% for message in messages | reverse %}
+          <div
+            class="message {% if message.sender == current_user.username %}self{% endif %}"
+          >
+            <div class="meta">
+              {{ message.sender }} • {{ message.created_at }}
+            </div>
+            <div class="bubble">{{ message.text }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        <div id="typing_indicator" class="typing"></div>
+
+        <form id="message_input_form" class="chat-input">
+          <input
+            type="text"
+            id="message_input"
+            placeholder="Type a message..."
+          />
+          <button type="submit">Send</button>
+        </form>
+      </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
+    <script>
+      const socket = io.connect("http://127.0.0.1:5000");
+      socket.on("connect", function () {
+        socket.emit("join_room", {
+          username: "{{ current_user.username }}",
+          room: "{{ room._id }}",
+        });
+
+        let input = document.getElementById("message_input");
+
+        document.getElementById("message_input_form").onsubmit = function (e) {
+          e.preventDefault();
+          let message = input.value.trim();
+          if (message.length) {
+            socket.emit("send_message", {
+              username: "{{ current_user.username }}",
+              room: "{{ room._id }}",
+              message: message,
+            });
+          }
+          input.value = "";
+          input.focus();
+        };
       });
 
-      let message_input = document.getElementById("message_input");
+      const appendMessage = (msg, user, time) => {
+        const div = document.createElement("div");
+        const isSelf = user === "{{ current_user.username }}";
 
-      document.getElementById("message_input_form").onsubmit = function (e) {
-        e.preventDefault();
-        let message = message_input.value.trim();
-        if (message.length) {
-          socket.emit("send_message", {
-            username: "{{ current_user.username }}",
-            room: "{{ room_id }}",
-            message: message,
-          });
-        }
-        message_input.value = "";
-        message_input.focus();
+        div.className = "message " + (isSelf ? "self" : "");
+        div.innerHTML = `
+            <div class="meta">${user} • ${time}</div>
+            <div class="bubble">${msg}</div>
+          `;
+
+        document.getElementById("messages").appendChild(div);
+        document.getElementById("messages").scrollTop =
+          document.getElementById("messages").scrollHeight;
       };
-    });
 
-    window.onbeforeunload = function () {
-      socket.emit('leave_room', {
-        username: "{{ current_user.username }}",
-        room: "{{ room._id }}"
-      })
-    };
+      let page = 0;
 
-    socket.on("receive_message", function (data) {
-      console.log(data);
-      const newNode = document.createElement("div");
-      newNode.innerHTML = `<b>${data.username}:&nbsp;</b> ${data.message}`; 
-      document.getElementById("messages").appendChild(newNode);
-    });
+      document.getElementById("load_older_messages_btn").onclick = (e) => {
+        page += 1;
+        fetch(`/rooms/{{ room._id }}/messages?page=${page}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }).then((response) =>
+          response.json().then((messages) => {
+            console.log(messages);
+            messages.forEach((e) => {
+              prepend_message(e.text, e.sender, e.created_at);
+            });
+          }),
+        );
+      };
 
-    socket.on("join_room_announcement", function (data) {
-      console.log(data);
-      const newNode = document.createElement("div");
-      newNode.innerHTML = `<b>${data.username}</b> has joined the room`;
-      document.getElementById("messages").appendChild(newNode);
-    });
+      const prepend_message = (msg, user, time) => {
+        const div = document.createElement("div");
+        const isSelf = user === "{{ current_user.username }}";
 
-    socket.on("leave_room_announcement", function (data) {
-      console.log(data);
-      const newNode = document.createElement("div");
-      newNode.innerHTML = `<b>${data.username}</b> has left the room`;
-      document.getElementById("messages").appendChild(newNode);
-    });
-  </script>
+        div.className = "message " + (isSelf ? "self" : "");
+        div.innerHTML = `
+              <div class="meta">${user} • ${time}</div>
+              <div class="bubble">${msg}</div>
+            `;
+
+        document
+          .getElementById("messages")
+          .insertBefore(div, document.getElementById("messages").firstChild);
+        document.getElementById("messages").scrollTop =
+          document.getElementById("messages").scrollHeight;
+      };
+
+      window.onbeforeunload = function () {
+        socket.emit("leave_room", {
+          username: "{{ current_user.username }}",
+          room: "{{ room._id }}",
+        });
+      };
+
+      socket.on("receive_message", (data) => {
+        appendMessage(data.message, data.username, data.created_at);
+      });
+
+      socket.on("join_room_announcement", (data) => {
+        const div = document.createElement("div");
+        div.className = "system";
+        div.innerText = `${data.username} joined the room`;
+        document.getElementById("messages").appendChild(div);
+      });
+
+      socket.on("leave_room_announcement", (data) => {
+        const div = document.createElement("div");
+        div.className = "system";
+        div.innerText = `${data.username} left the room`;
+        document.getElementById("messages").appendChild(div);
+      });
+
+      const input = document.getElementById("message_input");
+      let typingTimeout;
+
+      input.addEventListener("input", () => {
+        socket.emit("typing", {
+          username: "{{ current_user.username }}",
+          room: "{{ room._id }}",
+        });
+
+        clearTimeout(typingTimeout);
+
+        typingTimeout = setTimeout(() => {
+          socket.emit("stop_typing", {
+            username: "{{ current_user.username }}",
+            room: "{{ room._id }}",
+          });
+        }, 1000);
+      });
+
+      let typingUsers = new Set();
+
+      socket.on("typing", (data) => {
+        typingUsers.add(data.username);
+        renderTyping();
+      });
+
+      socket.on("stop_typing", (data) => {
+        typingUsers.delete(data.username);
+        renderTyping();
+      });
+
+      function renderTyping() {
+        const el = document.getElementById("typing_indicator");
+
+        if (typingUsers.size === 0) {
+          el.innerText = "";
+        } else if (typingUsers.size === 1) {
+          el.innerText = [...typingUsers][0] + " is typing...";
+        } else {
+          el.innerText = "Several people are typing...";
+        }
+      }
+
+      socket.on("online_users", (users) => {
+        const members = document.querySelectorAll(".member");
+
+        members.forEach((el) => {
+          const username = el.innerText;
+
+          if (users.includes(username)) {
+            el.classList.add("online");
+            el.classList.remove("offline");
+          } else {
+            el.classList.add("offline");
+            el.classList.remove("online");
+          }
+        });
+      });
+
+      socket.on("online_users", (users) => {
+        document.getElementById("online_count").innerText = users.length;
+      });
+    </script>
+  </body>
 </html>

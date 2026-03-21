@@ -1,49 +1,100 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>My Chat App</title>
-</head>
-<body>
-    <h1>Edit Room</h1>
-    <h3>{{ message }}</h3>
-    <form method="post">
-        <label>Room name:</label>
-        <input type="text" name="room_name" value="{{ room.name }}">
-        <br>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Edit Room</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/edit_room.css') }}"
+    />
+  </head>
 
-        <!-- <label>Members:</label>
-        <input type="text" name="members" value="{{ room_members_str }}">
-        <br>
-        <button type="submit">Submit</button>-->
-        <h3>{{ search_message }}</h3> 
+  <body>
+    <div class="container">
+      <div class="card">
+        <h1>Edit Room</h1>
 
-        <!-- Search user -->
-        <label>Search username:</label>
-        <input type="text" name="username">
-        <button type="submit" name="action" value="search">Search</button>
+        {% if message %}
+        <div class="message success">{{ message }}</div>
+        {% endif %} {% if search_message %}
+        <div class="message error">{{ search_message }}</div>
+        {% endif %}
 
-        <h3>Chat Members</h3>
-        <ul>
+        <form method="post">
+          <!-- Room name -->
+          <div class="form-group">
+            <label>>> Room Name</label>
+            <input
+              type="text"
+              name="room_name"
+              value="{{ room.name }}"
+              required
+            />
+          </div>
+
+          <!-- Search -->
+          <div class="form-group">
+            <label>>> Add Member</label>
+            <div class="search-box">
+              <input
+                type="text"
+                name="username"
+                placeholder="Enter username..."
+              />
+              <button type="submit" name="action" value="search">Add</button>
+            </div>
+          </div>
+
+          <!-- Members -->
+          <div class="members">
+            <h3># Members</h3>
+
             {% for member in members %}
-                <li>
-                    <p>{{ member }}</p>
+            <div class="member-item">
+              <span>> {{ member }}</span>
 
-                    <!-- giữ danh sách -->
-                    <input type="hidden" name="members" value="{{ member }}">
+              <!-- giữ state -->
+              <input type="hidden" name="members" value="{{ member }}" />
 
-                    <!-- gửi đúng user cần remove -->
-                    <button type="submit" name="remove_user" value="{{ member }}">
-                        Remove
-                    </button>
-                </li>
+              <!-- remove -->
+              <button
+                type="submit"
+                name="remove_user"
+                value="{{ member }}"
+                class="remove-btn"
+              >
+                Remove
+              </button>
+            </div>
             {% endfor %}
-        </ul>
+          </div>
 
-        <br>
-
-        <!-- Create room -->
-        <button type="submit" name="action" value="edit">Edit Room</button>
-    </form>
-</body>
+          <!-- Submit -->
+          <button type="submit" name="action" value="edit" class="submit-btn">
+            Save Changes
+          </button>
+          <!-- Terminate -->
+          <button
+            type="submit"
+            name="action"
+            value="terminate"
+            class="terminate-btn"
+          >
+            Terminate This Room
+          </button>
+        </form>
+      </div>
+    </div>
+    <script>
+      document.querySelector(".terminate-btn").onclick = (e) => {
+        let isOk = window.confirm("This action cannot be undone. Continue?");
+        if (isOk) {
+          e.target.closest("form").submit();
+        }else{
+          e.preventDefault()
+        }
+      };
+    </script>
+  </body>
 </html>

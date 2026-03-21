@@ -1,22 +1,48 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>My Chat App</title>
-</head>
-<body>
-    <h1>Sign Up</h1>
-    <h3>{{ message }}</h3>
-    <form method="POST" action="/signup">
-        <label>Username:</label>
-        <input type="text" name="username">
-        <br>
-        <label>Email:</label>
-        <input type="email" name="email">
-        <br>
-        <label>Password:</label>
-        <input type="password" name="password">
-        <br>
-        <button type="submit">Submit</button>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register Access</title>
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/signup.css') }}"
+    />
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="card">
+        <h1>REGISTER IDENTITY</h1>
+
+        {% if message %}
+        <div class="message">{{ message }}</div>
+        {% endif %}
+
+        <form method="POST" action="/signup">
+          <div class="form-group">
+            <label>USERNAME</label>
+            <input type="text" name="username" required />
+          </div>
+
+          <div class="form-group">
+            <label>EMAIL</label>
+            <input type="email" name="email" required />
+          </div>
+
+          <div class="form-group">
+            <label>PASSWORD</label>
+            <input type="password" name="password" required />
+          </div>
+
+          <button type="submit">CREATE ACCESS</button>
+        </form>
+
+        <div class="footer">
+          Already registered? <a href="/login">ENTER SYSTEM</a>
+        </div>
+      </div>
+    </div>
+  </body>
 </html>

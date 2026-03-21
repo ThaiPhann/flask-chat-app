@@ -2,7 +2,7 @@
 
 # 💬 Realtime Chat Web Application
 
-A modern realtime chat web application built with **Flask**, **Socket.IO**, and **MongoDB**, featuring room-based messaging, user authentication, and a friendly-style UI.
+A modern realtime chat web application built with **Flask**, **Socket.IO**, and **MongoDB**, featuring room-based messaging, user authentication, and a messenger-style UI.
 
 ---
 
@@ -15,7 +15,7 @@ A modern realtime chat web application built with **Flask**, **Socket.IO**, and 
 * 🟢 Online Users Indicator
 * ⌨️ Typing Indicator (like Messenger)
 * 📜 Load Older Messages (Pagination)
-* 🎨 Cyberpunk / Dark UI Design
+* 🎨 Meta Messenger UI Design
 * ⚡ Responsive (Mobile-friendly)
 
 ---

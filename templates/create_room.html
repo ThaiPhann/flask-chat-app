@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Room</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/create_room.css') }}"
+    />
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="card">
+        <h1>$ Create Room</h1>
+
+        {% if message %}
+        <div class="message">{{ message }}</div>
+        {% endif %}
+
+        <form action="/create-room" method="post">
+          <!-- Room name -->
+          <div class="form-group">
+            <label>>> Room Name</label>
+            <input
+              type="text"
+              name="room_name"
+              value="{{ room_name }}"
+              required
+            />
+          </div>
+
+          <!-- Search -->
+          <div class="form-group">
+            <label>>> Search User</label>
+            <div class="search-box">
+              <input
+                type="text"
+                name="username"
+                placeholder="Enter username..."
+              />
+              <button type="submit" name="action" value="search">Search</button>
+            </div>
+          </div>
+
+          {% if search_message %}
+          <div class="message">{{ search_message }}</div>
+          {% endif %}
+
+          <!-- Members -->
+          <div class="members">
+            <h3># Members</h3>
+
+            {% for member in members %}
+            <div class="member-item">
+              <span>> {{ member.username }}</span>
+
+              <!-- giữ state -->
+              <input
+                type="hidden"
+                name="members"
+                value="{{ member.username }}"
+              />
+
+              <!-- remove -->
+              <button
+                type="submit"
+                name="remove_user"
+                value="{{ member.username }}"
+                class="remove-btn"
+              >
+                Remove
+              </button>
+            </div>
+            {% endfor %}
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" name="action" value="create" class="submit-btn">
+            Create Room
+          </button>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

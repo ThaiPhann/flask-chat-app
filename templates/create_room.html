@@ -7,14 +7,35 @@
 <body>
     <h1>Create Room</h1>
     <h3>{{ message }}</h3>
-    <form method="post">
-        <label>Room name:</label>
-        <input type="text" name="room_name">
-        <br>
-        <label>Members:</label>
-        <input type="text" name="members">
-        <br>
-        <button type="submit">Submit</button>
-    </form>
+    <form action="/create-room" method="post">
+    <label>Room name:</label>
+    <input type="text" name="room_name" value="{{ room_name }}">
+    <br>
+
+    <h3>{{ search_message }}</h3>
+
+    <!-- Search user -->
+    <label>Search username:</label>
+    <input type="text" name="username">
+    <button type="submit" name="action" value="search">Search</button>
+
+    <!-- Members list -->
+    <h3>Chat Members</h3>
+    <ul>
+        {% for member in members %}
+            <li>
+                <p>{{ member.username }}<p>
+                <input type="hidden" name="remove_user" value="{{ member.username }}">
+                <button type="submit" name="action" value="remove">remove</button>
+            </li>
+            <input type="hidden" name="members" value="{{ member.username }}">
+        {% endfor %}
+    </ul>
+
+    <br>
+
+    <!-- Create room -->
+    <button type="submit" name="action" value="create">Create Room</button>
+</form>
 </body>
 </html>

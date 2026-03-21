@@ -63,11 +63,10 @@ def add_room_members(room_id, room_name, usernames, added_by):
                                         'added_by': added_by,
                                         'added_at': datetime.now(),
                                         'is_room_admin': False} for username in usernames])
-    
 def remove_room_members(room_id, usernames):
-    room_members_collection.delete_many({'_id': {'$in': [{'room_id': room_id,
-                                                          'username': username} for username in usernames]}})
-
+    room_members_collection.delete_many({'_id.room_id': ObjectId(room_id),
+                                         '_id.username': {'$in': usernames}})
+    
 def get_room_members(room_id):
     return list(room_members_collection.find({'_id.room_id': ObjectId(room_id)}))
 
@@ -80,5 +79,5 @@ def is_room_member(room_id, username):
     
 def is_room_admin(room_id, username):
     return room_members_collection.count_documents({'_id': {'room_id': ObjectId(room_id), 
-                                                     'username': username},
-                                             'is_room_admin': True})
+                                                            'username': username},
+                                                    'is_room_admin': True})

@@ -62,36 +62,80 @@ def signup():
 @app.route("/create-room", methods=['GET', 'POST'])
 @login_required
 def create_room():
+    members = []
     message = ''
+    search_message = ''
+    room_name = ''
     if request.method == 'POST':
+        action = request.form.get('action')
+        members = request.form.getlist('members')
         room_name = request.form.get('room_name')
-        usernames = [username.strip() for username in request.form.get('members').split(',')]
 
-        if len(room_name) and len(usernames):
-            room_id = save_room(room_name, current_user.username)
-            if current_user.username in usernames:
-                usernames.remove(current_user.username)
-            add_room_members(room_id, room_name, usernames, current_user.username)
-            return redirect(url_for('view_room', room_id=room_id))
-        else:
-            message='Create Room Failed !'
-    return render_template('create_room.html',message=message)
+        if action == "search":
+            username = request.form.get('username')
+            user = get_user(username)
+            if user:
+                if user.username not in members:
+                    members.append(user.username)
+            else:
+                search_message = "User not found!"
+        elif action == "remove":
+            members.remove(request.form.get('remove_user'))
+        elif action == "create":
+            room_name = request.form.get('room_name')
+            usernames = [u.strip() for u in members]
+            if room_name and usernames:
+                room_id = save_room(room_name, current_user.username)
+                if current_user.username in usernames:
+                    usernames.remove(current_user.username)
+                add_room_members(room_id, room_name, usernames, current_user.username)
+                return redirect(url_for('view_room', room_id=room_id))
+            else:
+                message = "Create Room Failed!"
+    return render_template(
+        "create_room.html",
+        room_name=room_name,
+        members=[{'username': m} for m in members],
+        message=message,
+        search_message=search_message
+    )
 
 @app.route("/rooms/<room_id>/edit", methods=['GET', 'POST'])
 @login_required
 def edit_room(room_id):
     room = get_room(room_id)
-    if room and is_room_admin(room_id, current_user.username):
-        existing_room_members = [member['_id']['username'] for member in get_room_members(room_id)]
-        room_members_str = ",".join(existing_room_members)
-        message = ''
-        if request.method == 'POST':
-            room_name = request.form.get('room_name')
-            room['name']=room_name
-            update_room(room_id,room_name)
+    if not room or not is_room_admin(room_id, current_user.username):
+        return "Room not found", 404
+    existing_room_members = [m['_id']['username'] for m in get_room_members(room_id)]
+    room_members = existing_room_members.copy()
+    message = ''
+    search_message = ''
+    if request.method == 'POST':
+        action = request.form.get('action')
+        form_members = request.form.getlist('members')
+        room_name = request.form.get('room_name')
+        room['name'] = room_name
+        if form_members:
+            room_members = form_members
 
-            new_members = [username.strip() for username in request.form.get('members').split(',')]
-
+        remove_user = request.form.get('remove_user')
+        if remove_user:
+            if remove_user == current_user.username:
+                message = "You cannot remove yourself!"
+            elif remove_user in room_members:
+                room_members.remove(remove_user)
+        if action == "search":
+            username = request.form.get('username')
+            user = get_user(username)
+            if user:
+                uname = user['username']
+                if uname not in room_members:
+                    room_members.append(uname)
+            else:
+                search_message = "User not found!"
+        elif action == "edit":
+            update_room(room_id, room_name)
+            new_members = [username.strip() for username in room_members]
             members_to_add = list(set(new_members) - set(existing_room_members))
             members_to_remove = list(set(existing_room_members) - set(new_members))
             if len(members_to_add):
@@ -99,10 +143,14 @@ def edit_room(room_id):
             if len(members_to_remove):
                 remove_room_members(room_id, members_to_remove)
             message = 'Room edited successfully!'
-            room_members_str = ",".join(new_members)
-        return render_template('edit_room.html', room=room, room_members_str=room_members_str, message=message)
-    else:
-        return "Room not found", 404
+            room_members = new_members
+    return render_template(
+        'edit_room.html',
+        room=room,
+        members=room_members,
+        message=message,
+        search_message=search_message
+    )
 
 @app.route("/rooms/<room_id>")
 @login_required

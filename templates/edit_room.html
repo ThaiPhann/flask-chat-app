@@ -11,10 +11,39 @@
         <label>Room name:</label>
         <input type="text" name="room_name" value="{{ room.name }}">
         <br>
-        <label>Members:</label>
+
+        <!-- <label>Members:</label>
         <input type="text" name="members" value="{{ room_members_str }}">
         <br>
-        <button type="submit">Submit</button>
+        <button type="submit">Submit</button>-->
+        <h3>{{ search_message }}</h3> 
+
+        <!-- Search user -->
+        <label>Search username:</label>
+        <input type="text" name="username">
+        <button type="submit" name="action" value="search">Search</button>
+
+        <h3>Chat Members</h3>
+        <ul>
+            {% for member in members %}
+                <li>
+                    <p>{{ member }}</p>
+
+                    <!-- giữ danh sách -->
+                    <input type="hidden" name="members" value="{{ member }}">
+
+                    <!-- gửi đúng user cần remove -->
+                    <button type="submit" name="remove_user" value="{{ member }}">
+                        Remove
+                    </button>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <br>
+
+        <!-- Create room -->
+        <button type="submit" name="action" value="edit">Edit Room</button>
     </form>
 </body>
 </html>

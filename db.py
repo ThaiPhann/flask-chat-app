@@ -77,14 +77,22 @@ def remove_room_members(room_id, usernames):
 def get_room_members(room_id):
     return list(room_members_collection.find({'_id.room_id': ObjectId(room_id)}))
 
-ROOM_FETCH_LIMIT = 5
+ROOM_FETCH_LIMIT = 4
+# 1 2 3 4 5 6 7
 def get_rooms_for_user(username, page=0):
     offset = page * ROOM_FETCH_LIMIT
-    rooms = list(room_members_collection.find({'_id.username': username})
-                                        .sort('_id.room_id', DESCENDING)
-                                        .limit(ROOM_FETCH_LIMIT)
-                                        .skip(offset))
-    return rooms
+    rooms = list(
+        room_members_collection.find({'_id.username': username})
+                                .sort('_id.room_id', DESCENDING)
+                                .skip(offset)
+                                .limit(ROOM_FETCH_LIMIT + 1))
+    isNext = len(rooms) > ROOM_FETCH_LIMIT
+    if isNext:
+        rooms = rooms[:ROOM_FETCH_LIMIT]
+    return {
+        'rooms': rooms,
+        'isNext': isNext
+    }
 
 def is_room_member(room_id, username):
     return room_members_collection.count_documents({'_id': {'room_id': ObjectId(room_id), 
@@ -101,14 +109,18 @@ def save_message(room_id, text, sender):
                                     'sender': sender,
                                     'created_at': datetime.now()})
     
-MESSAGE_FETCH_LIMIT = 3
+MESSAGE_FETCH_LIMIT = 4
 
 def get_messages(room_id, page=0):
     offset = page * MESSAGE_FETCH_LIMIT
     messages = list(messages_collection.find({'room_id': room_id})
                                        .sort('_id', DESCENDING)
-                                       .limit(MESSAGE_FETCH_LIMIT)
+                                       .limit(MESSAGE_FETCH_LIMIT+1)
                                        .skip(offset))
+    isNext = len(messages) > MESSAGE_FETCH_LIMIT
+    if isNext:
+        messages = messages[:MESSAGE_FETCH_LIMIT]
     for message in messages:
         message['created_at'] = message['created_at'].strftime("%d %b, %H:%M")
-    return messages
+    return {'messages':messages,
+            'isNext': isNext}

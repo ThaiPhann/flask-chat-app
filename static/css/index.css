@@ -147,6 +147,10 @@ ul {
   border-radius: 6px;
 }
 
+.hidden {
+  display: none !important;
+}
+
 .load-btn:hover {
   background: #00ff9f;
   color: black;

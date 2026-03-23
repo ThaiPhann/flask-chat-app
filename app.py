@@ -19,16 +19,17 @@ online_users = {}
 @app.route("/")
 @login_required
 def home():
-    rooms = []
+    response = {}
     if current_user.is_authenticated:
-        rooms = get_rooms_for_user(current_user.username)
-    return render_template('index.html', rooms=rooms)
+        response = get_rooms_for_user(current_user.username)
+    return render_template('index.html', res=response)
 
 @app.route("/home/rooms/")
 @login_required
 def get_older_rooms():
     page = int(request.args.get("page",0))
     rooms = get_rooms_for_user(current_user.username, page)
+    print(rooms['isNext'])
     return dumps(rooms)
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -170,7 +171,6 @@ def edit_room(room_id):
                 return redirect(url_for('home'))
             except:
                 message = 'Terminated Failed!'
-            
 
     return render_template(
         'edit_room.html',

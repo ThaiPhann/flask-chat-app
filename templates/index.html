@@ -29,9 +29,9 @@
             <a href="/logout" class="logout-btn">Log out</a>
           </div>
         </div>
-        {% if rooms %}
+        {% if res.rooms %}
         <ul id="rooms">
-          {% for room in rooms %}
+          {% for room in res.rooms %}
           <li class="room-item">
             <a class="room-link" href="/rooms/{{ room._id.room_id }}">
               > {{ room.room_name }}
@@ -58,8 +58,9 @@
         >
           Let's create your room chat
         </h3>
-        {% endif %}
+        {% endif %} {% if res.isNext %}
         <button class="load-btn" id="load_older_rooms_btn">More</button>
+        {% else %} <button class="load-btn hidden" id="load_older_rooms_btn">More</button> {% endif %}
       </div>
     </div>
     <script>
@@ -77,7 +78,7 @@
           html += `
               <div class="actions">
                 <a href="/rooms/${room_id.$oid}/edit" class="edit-btn">
-                  ✏️ Edit
+                  Edit
                 </a>
               </div>
             `;
@@ -85,8 +86,8 @@
         li.innerHTML = html;
         document.getElementById("rooms").appendChild(li);
       };
-
-      document.getElementById("load_older_rooms_btn").onclick = (e) => {
+      const load_btn = document.getElementById("load_older_rooms_btn");
+      load_btn.onclick = (e) => {
         page += 1;
         fetch(`/home/rooms?page=${page}`, {
           method: "GET",
@@ -94,11 +95,13 @@
             "Content-Type": "application/json",
           },
         }).then((response) =>
-          response.json().then((rooms) => {
-            console.log(rooms);
-            rooms.forEach((e) => {
+          response.json().then((res) => {
+            console.log(res);
+            res.rooms.forEach((e) => {
               appendRoom(e._id.room_id, e.room_name, e.is_room_admin);
             });
+            if (!res.isNext)
+              load_btn.classList.add("hidden");
           }),
         );
       };

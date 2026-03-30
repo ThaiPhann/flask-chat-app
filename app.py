@@ -1,11 +1,13 @@
 from datetime import datetime
+import os
 from bson.json_util import dumps
 
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, jsonify, render_template, request, redirect, url_for
 from flask_socketio import SocketIO, join_room, leave_room
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from pymongo.errors import DuplicateKeyError
 from db import add_room_members, get_messages, get_room, get_room_members, get_rooms_for_user, get_user, is_room_admin, is_room_member, remove_room, remove_room_members, save_message, save_room, save_user, update_room
+import requests
 
 app = Flask(__name__)
 app.secret_key = "my secret key"
@@ -13,6 +15,9 @@ socketio = SocketIO(app)
 login_manager = LoginManager()
 login_manager.login_view = 'login'
 login_manager.init_app(app)
+
+n8n_webhook_url = os.getenv('N8N_WEBHOOK_URL')
+host = os.getenv('HOST')
 
 online_users = {}
 
@@ -189,6 +194,7 @@ def view_room(room_id):
         messages = get_messages(room_id)
         return render_template('view_room.html',
                                 room=room,
+                                host=host,
                                 room_members=room_members,
                                 messages=messages)
     else:
@@ -212,8 +218,16 @@ def handle_send_message_event(data):
                                                                  data['message']))
     data['created_at'] = datetime.now().strftime("%d %b, %H:%M")
     save_message(data['room'], data['message'], data['username'])
-
+    message = data['message']
     socketio.emit('receive_message', data, room=data['room'])
+    if "@ChatAI" in  data['message']:
+        edited_message = message.replace("@ChatAI", "").strip()
+        socketio.start_background_task(
+            trigger_n8n,
+            data['username'],
+            edited_message,
+            data['room']
+        )
 
 @socketio.on('join_room')
 def handle_join_room_event(data):
@@ -254,5 +268,61 @@ def handle_stop_typing(data):
 def load_user(username):
     return get_user(username)
 
+def trigger_n8n(username, message, room):
+    try:
+        data = {
+            "user": username,
+            "message": message,
+            "room": room
+        }
+
+        response_data = {
+            'username': 'ChatBot',
+            'message': '',
+            'created_at': datetime.now().strftime("%d %b, %H:%M")
+        }
+
+        # Send request to n8n
+        response = requests.post(n8n_webhook_url, json=data, timeout=(5,30))
+        # requests.post(n8n_webhook_url, json=data, timeout=10)
+        # Try parse JSON safely
+        try:
+            res_json = response.json()
+        except:
+            res_json = None
+
+        if response.status_code in (200, 201, 202):
+            if res_json and 'output' in res_json:
+                response_data['message'] = res_json['output']
+            elif res_json:
+                response_data['message'] = str(res_json)
+            else:
+                response_data['message'] = response.text
+        else:
+            response_data['message'] = f"Lỗi từ n8n: {response.text}"
+        save_message(room, response_data['message'], 'ChatBot')
+        socketio.emit('receive_message', data=response_data, room=room)
+
+    except requests.exceptions.RequestException as e:
+        app.logger.error(f"Failed to reach n8n: {str(e)}")
+        # gửi lỗi về chat luôn (rất quan trọng khi demo)
+        socketio.emit('receive_message', data={
+            'username': 'ChatBot',
+            'message': '⚠️ Không thể kết nối tới hệ thống AI!',
+            'created_at': datetime.now().strftime("%d %b, %H:%M")
+        }, room=room)
+
+# @app.route("/bot-reply", methods=["POST"])
+# def bot_reply():
+#     data = request.json
+
+#     socketio.emit('receive_message', {
+#         'username': 'ChatBot',
+#         'message': data['message'],
+#         'created_at': datetime.now().strftime("%d %b, %H:%M")
+#     }, room=data['room'])
+
+#     return {"status": "ok"}
+
 if __name__ == "__main__":
-    socketio.run(app, debug=True)
+    socketio.run(app,host,port=5000 ,debug=True)
